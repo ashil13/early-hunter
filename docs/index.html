@@ -1,0 +1,95 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Early Hunter</title>
+<style>
+ body{background:#0f1117;color:#e6e6e6;font-family:Segoe UI,Arial,sans-serif;margin:0}
+ .wrap{max-width:980px;margin:0 auto;padding:24px}
+ h1{margin:0 0 4px} .sub{color:#8b93a7;margin-bottom:24px}
+ a{color:#6ea8fe;text-decoration:none} a:hover{text-decoration:underline}
+ .cards{display:flex;gap:12px;margin-bottom:24px;flex-wrap:wrap}
+ .card{background:#181b24;border:1px solid #262b38;border-radius:10px;padding:14px 18px;min-width:140px}
+ .card b{display:block;font-size:22px} .card span{color:#8b93a7;font-size:13px}
+ .scroll{overflow-x:auto}
+ table{width:100%;border-collapse:collapse;background:#181b24;border-radius:10px;overflow:hidden}
+ th,td{padding:10px 12px;text-align:left;border-bottom:1px solid #262b38;font-size:14px;white-space:nowrap}
+ th{color:#8b93a7;font-weight:600;background:#141720}
+ tr.row{cursor:pointer} tr.row:hover td{background:#1d2130}
+ .pill{background:#2b3a67;border-radius:20px;padding:2px 10px;font-weight:600}
+ .filter button{background:#181b24;color:#e6e6e6;border:1px solid #262b38;border-radius:8px;padding:6px 12px;margin-right:8px;cursor:pointer}
+ .filter button.on{background:#2b3a67;border-color:#3d5199}
+ .muted{color:#8b93a7} code{font-size:13px}
+ .detail{background:#141720}
+</style>
+</head>
+<body>
+<div class="wrap">
+ <h1>EARLY HUNTER</h1>
+ <div class="sub">Base chain &middot; wallets that deployed several new contracts &middot; <span id="upd">loading...</span></div>
+ <div class="cards">
+  <div class="card"><b id="c1">-</b><span>contracts collected</span></div>
+  <div class="card"><b id="c2">-</b><span>creator wallets</span></div>
+  <div class="card"><b id="c3">-</b><span>last scanned block</span></div>
+ </div>
+ <div class="filter" id="filter"></div><br>
+ <div class="scroll"><table>
+  <thead><tr><th>#</th><th>Creator wallet</th><th>Contracts</th><th>First seen</th><th>Spread</th><th>Last seen</th></tr></thead>
+  <tbody id="body"></tbody>
+ </table></div>
+</div>
+<script>
+var DATA=null, MIN=2, OPEN=null;
+function short(a){return a.slice(0,8)+"…"+a.slice(-6)}
+function fmt(t){return new Date(t*1000).toISOString().slice(0,16).replace("T"," ")+" UTC"}
+function ago(t){var s=Math.max(0,Math.floor(Date.now()/1000-t));
+ if(s<3600)return Math.floor(s/60)+" min ago"; if(s<86400)return Math.floor(s/3600)+" h ago"; return Math.floor(s/86400)+" d ago"}
+function el(tag,text,attrs){var e=document.createElement(tag); if(text!==undefined)e.textContent=text;
+ if(attrs)for(var k in attrs)e.setAttribute(k,attrs[k]); return e}
+function link(href,text){var a=el("a",null,{href:href,target:"_blank",rel:"noopener"}); var c=el("code",text); a.appendChild(c); return a}
+function render(){
+ var body=document.getElementById("body"); body.textContent="";
+ var rows=DATA.wallets.filter(function(w){return w.count>=MIN});
+ if(!rows.length){var tr=el("tr"),td=el("td","Nothing here yet. Data is collected every ~10 minutes - check back soon.",{colspan:6,class:"muted"});tr.appendChild(td);body.appendChild(tr);return}
+ rows.forEach(function(w,i){
+  var tr=el("tr",null,{class:"row"});
+  tr.appendChild(el("td",String(i+1)));
+  var t1=el("td"); t1.appendChild(el("code",short(w.creator))); tr.appendChild(t1);
+  var t2=el("td"); t2.appendChild(el("span",String(w.count),{class:"pill"})); tr.appendChild(t2);
+  tr.appendChild(el("td",fmt(w.first)));
+  tr.appendChild(el("td",Math.round((w.last-w.first)/60)+" min"));
+  tr.appendChild(el("td",ago(w.last)));
+  tr.onclick=function(){OPEN=(OPEN===w.creator)?null:w.creator; render()};
+  body.appendChild(tr);
+  if(OPEN===w.creator){
+   var dr=el("tr",null,{class:"detail"}), dc=el("td",null,{colspan:6});
+   var top=el("div"); top.appendChild(link("https://basescan.org/address/"+w.creator,"Open wallet on Basescan")); dc.appendChild(top); dc.appendChild(el("br"));
+   w.contracts.forEach(function(c){
+    var line=el("div"); line.appendChild(el("span",fmt(c.time)+"   ",{class:"muted"}));
+    line.appendChild(link("https://basescan.org/address/"+c.address,short(c.address)));
+    line.appendChild(el("span","   tx ",{class:"muted"}));
+    line.appendChild(link("https://basescan.org/tx/"+c.tx,short(c.tx))); dc.appendChild(line)});
+   dr.appendChild(dc); body.appendChild(dr);
+  }
+ });
+}
+function buildFilter(){
+ var f=document.getElementById("filter"); f.textContent="Show wallets with at least: ";
+ [2,3,5,10].forEach(function(n){var b=el("button",n+" contracts"); if(n===MIN)b.className="on";
+  b.onclick=function(){MIN=n;buildFilter();render()}; f.appendChild(b)});
+}
+function load(){
+ fetch("data.json?"+Date.now()).then(function(r){return r.json()}).then(function(d){
+  DATA=d;
+  document.getElementById("c1").textContent=d.total_contracts;
+  document.getElementById("c2").textContent=d.total_wallets;
+  document.getElementById("c3").textContent=d.last_block===null?"-":d.last_block;
+  document.getElementById("upd").textContent=d.updated?("updated "+ago(d.updated)+", last "+d.window_days+" days"):"waiting for first update";
+  buildFilter(); render();
+ }).catch(function(){document.getElementById("upd").textContent="could not load data"});
+}
+load();
+</script>
+</body>
+</html>
