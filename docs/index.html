@@ -5,91 +5,161 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Early Hunter</title>
 <style>
- body{background:#0f1117;color:#e6e6e6;font-family:Segoe UI,Arial,sans-serif;margin:0}
- .wrap{max-width:980px;margin:0 auto;padding:24px}
- h1{margin:0 0 4px} .sub{color:#8b93a7;margin-bottom:24px}
- a{color:#6ea8fe;text-decoration:none} a:hover{text-decoration:underline}
- .cards{display:flex;gap:12px;margin-bottom:24px;flex-wrap:wrap}
- .card{background:#181b24;border:1px solid #262b38;border-radius:10px;padding:14px 18px;min-width:140px}
- .card b{display:block;font-size:22px} .card span{color:#8b93a7;font-size:13px}
- .scroll{overflow-x:auto}
- table{width:100%;border-collapse:collapse;background:#181b24;border-radius:10px;overflow:hidden}
- th,td{padding:10px 12px;text-align:left;border-bottom:1px solid #262b38;font-size:14px;white-space:nowrap}
- th{color:#8b93a7;font-weight:600;background:#141720}
- tr.row{cursor:pointer} tr.row:hover td{background:#1d2130}
- .pill{background:#2b3a67;border-radius:20px;padding:2px 10px;font-weight:600}
- .filter button{background:#181b24;color:#e6e6e6;border:1px solid #262b38;border-radius:8px;padding:6px 12px;margin-right:8px;cursor:pointer}
- .filter button.on{background:#2b3a67;border-color:#3d5199}
- .muted{color:#8b93a7} code{font-size:13px}
- .detail{background:#141720}
+ :root{--bg:#0f1117;--card:#181b24;--line:#262b38;--mut:#8b93a7;--txt:#e6e6e6;--acc:#6ea8fe}
+ body{background:var(--bg);color:var(--txt);font-family:Segoe UI,Arial,sans-serif;margin:0}
+ .wrap{max-width:1000px;margin:0 auto;padding:24px}
+ h1{margin:0 0 4px;letter-spacing:1px} h2{margin:28px 0 10px;font-size:18px} .sub{color:var(--mut);margin-bottom:18px}
+ a{color:var(--acc);text-decoration:none} a:hover{text-decoration:underline}
+ .tabs{margin:16px 0}.tabs a{display:inline-block;padding:6px 14px;border:1px solid var(--line);border-radius:8px;margin-right:8px;color:var(--txt)}
+ .tabs a.on{background:#2b3a67;border-color:#3d5199}
+ .cards{display:flex;gap:12px;margin-bottom:20px;flex-wrap:wrap}
+ .card{background:var(--card);border:1px solid var(--line);border-radius:10px;padding:14px 18px;min-width:140px}
+ .card b{display:block;font-size:22px}.card span{color:var(--mut);font-size:13px}
+ .cand{display:block;background:var(--card);border:1px solid var(--line);border-radius:12px;padding:16px;margin-bottom:12px;color:var(--txt)}
+ .cand:hover{border-color:#3d5199;text-decoration:none}
+ .row{display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap}
+ .score{font-size:28px;font-weight:700}
+ .hi{color:#5ddc8a}.mid{color:#f0c14b}.lo{color:#9aa3b8}
+ .chip{display:inline-block;background:#232a40;border:1px solid #2f3a5c;border-radius:20px;padding:2px 10px;margin:4px 6px 0 0;font-size:12px}
+ .chip.neg{background:#3a2326;border-color:#5c2f35}
+ .meta{color:var(--mut);font-size:13px;margin-top:6px}
+ table{width:100%;border-collapse:collapse;background:var(--card);border-radius:10px;overflow:hidden}
+ th,td{padding:9px 12px;text-align:left;border-bottom:1px solid var(--line);font-size:13px;white-space:nowrap}
+ th{color:var(--mut);background:#141720}.scroll{overflow-x:auto}
+ .bar{height:8px;border-radius:4px;background:#2f3a5c;margin-top:4px}.bar i{display:block;height:8px;border-radius:4px;background:#5ddc8a}
+ .sig{background:var(--card);border:1px solid var(--line);border-radius:10px;padding:10px 14px;margin-bottom:8px}
+ .tl{border-left:2px solid #2f3a5c;margin-left:6px;padding-left:16px}
+ .tl div{margin-bottom:10px;font-size:14px}.tl small{color:var(--mut);display:block}
+ .note{background:#1b2030;border:1px solid #2f3a5c;border-radius:10px;padding:12px 14px;color:var(--mut);font-size:13px;margin:14px 0}
+ .why{background:var(--card);border-left:3px solid var(--acc);padding:12px 14px;border-radius:6px;line-height:1.55}
+ code{font-size:12px}.muted{color:var(--mut)}
+ button.f{background:var(--card);color:var(--txt);border:1px solid var(--line);border-radius:8px;padding:5px 12px;margin-right:6px;cursor:pointer}
+ button.f.on{background:#2b3a67;border-color:#3d5199}
 </style>
 </head>
-<body>
-<div class="wrap">
- <h1>EARLY HUNTER</h1>
- <div class="sub">Base chain &middot; wallets that deployed several new contracts &middot; <span id="upd">loading...</span></div>
- <div class="cards">
-  <div class="card"><b id="c1">-</b><span>contracts collected</span></div>
-  <div class="card"><b id="c2">-</b><span>creator wallets</span></div>
-  <div class="card"><b id="c3">-</b><span>last scanned block</span></div>
- </div>
- <div class="filter" id="filter"></div><br>
- <div class="scroll"><table>
-  <thead><tr><th>#</th><th>Creator wallet</th><th>Contracts</th><th>First seen</th><th>Spread</th><th>Last seen</th></tr></thead>
-  <tbody id="body"></tbody>
- </table></div>
-</div>
+<body><div class="wrap" id="app">Loading…</div>
 <script>
-var DATA=null, MIN=2, OPEN=null;
-function short(a){return a.slice(0,8)+"…"+a.slice(-6)}
+var DATA=null, MINSCORE=0, MINC=2, OPEN=null;
+function short(a){return a&&a.length>16?a.slice(0,8)+"…"+a.slice(-6):a}
 function fmt(t){return new Date(t*1000).toISOString().slice(0,16).replace("T"," ")+" UTC"}
 function ago(t){var s=Math.max(0,Math.floor(Date.now()/1000-t));
- if(s<3600)return Math.floor(s/60)+" min ago"; if(s<86400)return Math.floor(s/3600)+" h ago"; return Math.floor(s/86400)+" d ago"}
-function el(tag,text,attrs){var e=document.createElement(tag); if(text!==undefined)e.textContent=text;
+ if(s<3600)return Math.max(1,Math.floor(s/60))+" min ago"; if(s<86400)return Math.floor(s/3600)+" h ago"; return Math.floor(s/86400)+" d ago"}
+function el(tag,text,attrs){var e=document.createElement(tag); if(text!==undefined&&text!==null)e.textContent=text;
  if(attrs)for(var k in attrs)e.setAttribute(k,attrs[k]); return e}
-function link(href,text){var a=el("a",null,{href:href,target:"_blank",rel:"noopener"}); var c=el("code",text); a.appendChild(c); return a}
-function render(){
- var body=document.getElementById("body"); body.textContent="";
- var rows=DATA.wallets.filter(function(w){return w.count>=MIN});
- if(!rows.length){var tr=el("tr"),td=el("td","Nothing here yet. Data is collected every ~10 minutes - check back soon.",{colspan:6,class:"muted"});tr.appendChild(td);body.appendChild(tr);return}
+function add(p){for(var i=1;i<arguments.length;i++)p.appendChild(arguments[i]);return p}
+function ext(href,text){var a=el("a",null,{href:href,target:"_blank",rel:"noopener"});add(a,el("code",text));return a}
+function cls(s){return s>=60?"hi":s>=35?"mid":"lo"}
+
+function header(app,tab){
+ add(app,el("h1","EARLY HUNTER"));
+ var u=DATA.updated?("Base chain · updated "+ago(DATA.updated)+" · last "+DATA.window_days+" days of activity"):"waiting for first update";
+ add(app,el("div",u,{class:"sub"}));
+ var t=el("div",null,{class:"tabs"});
+ [["#/","Early signals"],["#/research","Research: top deployers"]].forEach(function(x){
+  var a=el("a",x[1],{href:x[0]}); if(x[0]===tab)a.className="on"; t.appendChild(a)});
+ add(app,t);
+}
+
+function viewHome(app){
+ header(app,"#/");
+ var en=DATA.enrichment||{};
+ var cards=el("div",null,{class:"cards"});
+ [[ (DATA.candidates||[]).length,"candidates"],[DATA.total_contracts,"contracts seen"],[DATA.total_wallets,"deployer wallets"],[en.analysed||0,"wallets analysed"]].forEach(function(x){
+  var c=el("div",null,{class:"card"});add(c,el("b",String(x[0])),el("span",x[1]));cards.appendChild(c)});
+ add(app,cards);
+ if(en.errors&&!en.analysed)add(app,el("div","Wallet history lookups are failing right now ("+(en.last_error||"unknown error")+"). Scores use limited evidence until this works.",{class:"note"}));
+ else if(en.waiting)add(app,el("div",en.waiting+" wallets are still waiting for analysis. Scores improve as the collector catches up.",{class:"note"}));
+ var f=el("div");f.appendChild(document.createTextNode("Minimum score: "));
+ [0,30,50,70].forEach(function(n){var b=el("button",n===0?"all":n+"+",{class:"f"+(n===MINSCORE?" on":"")});b.onclick=function(){MINSCORE=n;render()};f.appendChild(b)});
+ add(app,f);add(app,el("br"));
+ var list=(DATA.candidates||[]).filter(function(c){return c.score>=MINSCORE});
+ if(!list.length){add(app,el("div","No candidates yet. The collector runs about every 15 minutes - check back soon.",{class:"muted"}));return}
+ list.forEach(function(c){
+  var a=el("a",null,{href:"#/c/"+c.id,class:"cand"});
+  var r=el("div",null,{class:"row"});
+  var left=el("div");add(left,el("b","Candidate "+c.id),el("div",c.category+" · "+c.stage,{class:"meta"}));
+  var right=el("div",null,{style:"text-align:right"});add(right,el("div",String(c.score),{class:"score "+cls(c.score)}),el("div","confidence "+c.confidence+"%",{class:"meta"}));
+  add(r,left,right);a.appendChild(r);
+  var chips=el("div");c.signals.forEach(function(s){chips.appendChild(el("span",s.label+" "+(s.points>0?"+":"")+s.points,{class:"chip"+(s.points<0?" neg":"")}))});
+  add(a,chips,el("div","first detected "+ago(c.first_detected)+" · "+c.contracts_total+" contracts · "+c.wallets.length+" wallet(s) · last activity "+ago(c.last_activity),{class:"meta"}));
+  app.appendChild(a)});
+}
+
+function table(heads,rows){
+ var w=el("div",null,{class:"scroll"}),t=el("table"),h=el("tr");
+ heads.forEach(function(x){h.appendChild(el("th",x))});t.appendChild(h);
+ rows.forEach(function(r){var tr=el("tr");r.forEach(function(c){var td=el("td");if(typeof c==="string"||typeof c==="number")td.textContent=String(c);else if(c)td.appendChild(c);tr.appendChild(td)});t.appendChild(tr)});
+ w.appendChild(t);return w}
+
+function viewCandidate(app,id){
+ var c=(DATA.candidates||[]).filter(function(x){return x.id===id})[0];
+ add(app,el("a","← all signals",{href:"#/"}));
+ if(!c){add(app,el("p","This candidate is no longer in the list (it may have aged out of the 7-day window)."));return}
+ add(app,el("h1","Candidate "+c.id));
+ add(app,el("div",c.stage+" · possible category: "+c.category,{class:"sub"}));
+ var cards=el("div",null,{class:"cards"});
+ [[c.score+"/100","early signal score"],[c.confidence+"%","evidence confidence"],[ago(c.first_detected),"first detected"],[c.contracts_total,"contracts"],[c.contracts_24h,"contracts in last 24h"]].forEach(function(x){
+  var d=el("div",null,{class:"card"});add(d,el("b",x[0]),el("span",x[1]));cards.appendChild(d)});add(app,cards);
+ add(app,el("div","Confidence measures how complete our evidence is. It is not the probability that this is a real project. These are leads to investigate, not conclusions.",{class:"note"}));
+ add(app,el("h2","Why is this interesting?"),el("div",c.why,{class:"why"}));
+ add(app,el("h2","Score breakdown"));
+ c.signals.forEach(function(s){var d=el("div",null,{class:"sig"});var r=el("div",null,{class:"row"});
+  add(r,el("b",s.label),el("b",(s.points>0?"+":"")+s.points,{class:s.points<0?"lo":"hi"}));
+  add(d,r,el("div",s.detail,{class:"meta"}));
+  if(s.points>0){var b=el("div",null,{class:"bar"});var i=el("i",null,{style:"width:"+Math.min(100,s.points*5)+"%"});b.appendChild(i);d.appendChild(b)}
+  app.appendChild(d)});
+ add(app,el("h2","Timeline"));
+ var tl=el("div",null,{class:"tl"});
+ c.timeline.forEach(function(e){var d=el("div");add(d,el("small",fmt(e.time)),document.createTextNode(e.text));tl.appendChild(d)});
+ add(app,tl);
+ add(app,el("h2","Related wallets"));
+ add(app,table(["Wallet","Contracts","Age (days)","Total tx","Analysis"],c.wallets.map(function(w){
+  return [ext("https://basescan.org/address/"+w.address,short(w.address)),w.contracts,w.age_days===null?"-":w.age_days,w.tx_count===null?"-":w.tx_count,w.status]})));
+ if(c.funding&&c.funding.length){
+  add(app,el("h2","Funding relationships"));
+  add(app,table(["From","To","ETH","Time","Link type"],c.funding.map(function(l){
+   var kind=l.kind==="shared"?"shared funder":l.kind==="direct"?"direct (funds another deployer)":l.kind==="service"?"high-volume / labeled address (not used as evidence)":"single";
+   return [ext("https://basescan.org/address/"+l.from,short(l.from)),ext("https://basescan.org/address/"+l.to,short(l.to)),l.eth,l.time?fmt(l.time):"-",kind]})));
+ }
+ add(app,el("h2","Contracts"));
+ add(app,table(["Time","Contract","Creator","Tx"],c.contracts.map(function(k){
+  return [fmt(k.time),ext("https://basescan.org/address/"+k.address,short(k.address)),ext("https://basescan.org/address/"+k.creator,short(k.creator)),ext("https://basescan.org/tx/"+k.tx,short(k.tx))]})));
+ add(app,el("h2","Project identity"));
+ add(app,el("div","Possible project: Unknown. Contract source, repositories, domains and social accounts are not analysed yet (planned next). Unknown is a valid result.",{class:"note"}));
+}
+
+function viewResearch(app){
+ header(app,"#/research");
+ add(app,el("div","Raw view: wallets that deployed several contracts. High counts alone are NOT an opportunity - see Early signals for behaviour-based ranking.",{class:"note"}));
+ var f=el("div");f.appendChild(document.createTextNode("Show wallets with at least: "));
+ [2,3,5,10].forEach(function(n){var b=el("button",n+" contracts",{class:"f"+(n===MINC?" on":"")});b.onclick=function(){MINC=n;render()};f.appendChild(b)});
+ add(app,f);add(app,el("br"));
+ var rows=DATA.wallets.filter(function(w){return w.count>=MINC});
+ var t=el("div",null,{class:"scroll"}),tb=el("table"),h=el("tr");
+ ["#","Creator wallet","Contracts","First seen","Spread","Last seen"].forEach(function(x){h.appendChild(el("th",x))});tb.appendChild(h);
  rows.forEach(function(w,i){
-  var tr=el("tr",null,{class:"row"});
-  tr.appendChild(el("td",String(i+1)));
-  var t1=el("td"); t1.appendChild(el("code",short(w.creator))); tr.appendChild(t1);
-  var t2=el("td"); t2.appendChild(el("span",String(w.count),{class:"pill"})); tr.appendChild(t2);
-  tr.appendChild(el("td",fmt(w.first)));
-  tr.appendChild(el("td",Math.round((w.last-w.first)/60)+" min"));
-  tr.appendChild(el("td",ago(w.last)));
-  tr.onclick=function(){OPEN=(OPEN===w.creator)?null:w.creator; render()};
-  body.appendChild(tr);
-  if(OPEN===w.creator){
-   var dr=el("tr",null,{class:"detail"}), dc=el("td",null,{colspan:6});
-   var top=el("div"); top.appendChild(link("https://basescan.org/address/"+w.creator,"Open wallet on Basescan")); dc.appendChild(top); dc.appendChild(el("br"));
-   w.contracts.forEach(function(c){
-    var line=el("div"); line.appendChild(el("span",fmt(c.time)+"   ",{class:"muted"}));
-    line.appendChild(link("https://basescan.org/address/"+c.address,short(c.address)));
-    line.appendChild(el("span","   tx ",{class:"muted"}));
-    line.appendChild(link("https://basescan.org/tx/"+c.tx,short(c.tx))); dc.appendChild(line)});
-   dr.appendChild(dc); body.appendChild(dr);
-  }
- });
+  var tr=el("tr",null,{style:"cursor:pointer"});
+  [String(i+1),short(w.creator),String(w.count),fmt(w.first),Math.round((w.last-w.first)/60)+" min",ago(w.last)].forEach(function(x){tr.appendChild(el("td",x))});
+  tr.onclick=function(){OPEN=OPEN===w.creator?null:w.creator;render()};tb.appendChild(tr);
+  if(OPEN===w.creator){var dr=el("tr"),dc=el("td",null,{colspan:6});
+   add(dc,ext("https://basescan.org/address/"+w.creator,"Open wallet on Basescan"),el("br"));
+   w.contracts.forEach(function(c){var l=el("div");add(l,el("span",fmt(c.time)+"  ",{class:"muted"}),ext("https://basescan.org/address/"+c.address,short(c.address)));dc.appendChild(l)});
+   dr.appendChild(dc);tb.appendChild(dr)}});
+ t.appendChild(tb);add(app,t);
 }
-function buildFilter(){
- var f=document.getElementById("filter"); f.textContent="Show wallets with at least: ";
- [2,3,5,10].forEach(function(n){var b=el("button",n+" contracts"); if(n===MIN)b.className="on";
-  b.onclick=function(){MIN=n;buildFilter();render()}; f.appendChild(b)});
+
+function render(){
+ var app=document.getElementById("app");app.textContent="";
+ if(!DATA){app.textContent="Loading…";return}
+ var h=location.hash||"#/";
+ if(h.indexOf("#/c/")===0)viewCandidate(app,h.slice(4));
+ else if(h==="#/research")viewResearch(app);
+ else viewHome(app);
+ window.scrollTo(0,0);
 }
-function load(){
- fetch("data.json?"+Date.now()).then(function(r){return r.json()}).then(function(d){
-  DATA=d;
-  document.getElementById("c1").textContent=d.total_contracts;
-  document.getElementById("c2").textContent=d.total_wallets;
-  document.getElementById("c3").textContent=d.last_block===null?"-":d.last_block;
-  document.getElementById("upd").textContent=d.updated?("updated "+ago(d.updated)+", last "+d.window_days+" days"):"waiting for first update";
-  buildFilter(); render();
- }).catch(function(){document.getElementById("upd").textContent="could not load data"});
-}
-load();
+window.addEventListener("hashchange",render);
+fetch("data.json?"+Date.now()).then(function(r){return r.json()}).then(function(d){DATA=d;render()})
+ .catch(function(){document.getElementById("app").textContent="Could not load data."});
 </script>
 </body>
 </html>
