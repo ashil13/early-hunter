@@ -1,0 +1,6 @@
+address,status,tx_count,first_tx,wake_ts,gap_days,first_deploy,funder,fund_wei,fund_ts,enriched_at
+0x0dca33ffd6e69b47280f50442b5ebc722215ad1c,error,,,,,1791396855,,,,1791450979
+0x3d37da298e3a19e6b3d50802bff5057d364cd4ef,error,,,,,1791450437,,,,1791450954
+0x5695998081df75b90d6dec7b6ac7326f9a6852cc,error,,,,,1791449987,,,,1791450970
+0x7390c7402415b02511b179eaffedfbe82cee490f,error,,,,,1791450811,,,,1791450962
+0xbb151da331d123a23ff87641204be7b5ec0ebcd9,error,,,,,1791450323,,,,1791450946
