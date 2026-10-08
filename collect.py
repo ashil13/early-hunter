@@ -126,7 +126,7 @@ def main():
         r = wallets.get(creator)
         if r is None or (r.get("status") == "error" and now - int(r.get("enriched_at") or 0) > 6 * 3600):
             targets.append((creator, first_ts))
-    stats = enrich.enrich_all(targets, wallets, funders, started + 32 * 60, max_new=100)
+    stats = enrich.enrich_all(targets, wallets, funders, started + 32 * 60, max_new=60)
     print(f"Enrichment: {stats}")
 
     creators = {r[0] for r in db.execute("SELECT DISTINCT creator FROM deployments").fetchall()}

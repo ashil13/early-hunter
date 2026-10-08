@@ -15,9 +15,16 @@ from datetime import datetime
 
 import requests
 
-BASE = "https://base.blockscout.com/api/v2"
+API_KEY = os.environ.get("BLOCKSCOUT_API_KEY", "").strip()
+if API_KEY:
+    BASE = "https://api.blockscout.com/8453/api/v2"   # Blockscout PRO API (free key), Base = chain 8453
+else:
+    BASE = "https://base.blockscout.com/api/v2"       # public endpoint (often blocks cloud servers)
 SESSION = requests.Session()
-SESSION.headers.update({"User-Agent": "early-hunter/0.2", "Accept": "application/json"})
+SESSION.headers.update({
+    "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0 Safari/537.36",
+    "Accept": "application/json",
+})
 PAUSE = 0.3          # seconds between requests (the free API is shared)
 MAX_PAGES = 4        # 4 pages x 50 = 200 transactions of history
 HEAVY = 200          # wallets with more transactions than this are "heavy history"
@@ -53,9 +60,15 @@ def write_rows(path, fields, rows):
 
 # ------------------------------------------------------------------ http
 def get(path, params=None):
+    params = dict(params or {})
+    if API_KEY:
+        params["apikey"] = API_KEY
     for attempt in range(5):
         try:
             r = SESSION.get(BASE + path, params=params, timeout=30)
+            if r.status_code in (401, 403):
+                hint = "no BLOCKSCOUT_API_KEY set" if not API_KEY else "key rejected"
+                raise ApiError(f"{r.status_code} from Blockscout ({hint})")
             if r.status_code == 429:
                 time.sleep(2 * (attempt + 1))
                 continue
@@ -64,6 +77,8 @@ def get(path, params=None):
             r.raise_for_status()
             time.sleep(PAUSE)
             return r.json()
+        except ApiError:
+            raise
         except requests.RequestException as error:
             if attempt == 4:
                 raise ApiError(str(error))
