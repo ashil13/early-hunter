@@ -91,7 +91,8 @@ def main():
 
     c.DB_FILE = ":memory:"
     c.FIRST_RUN_BLOCKS = 600
-    c.MAX_BLOCKS_PER_RUN = 2000
+    c.MAX_BLOCKS_PER_RUN = 12000  # catch up fully even after a long gap between runs
+    c.DEADLINE = time.time() + 25 * 60  # stop after 25 minutes and save what we have
 
     db = c.open_db()
     load(db)

@@ -18,13 +18,15 @@ DB_FILE = "early_hunter.db"
 FIRST_RUN_BLOCKS = 1800  # about 1 hour of Base on the first run
 MAX_BLOCKS_PER_RUN = 3000  # safety limit per run
 MIN_CONTRACTS_TO_REPORT = 2
+DEADLINE = None  # optional: unix time after which scanning stops (used by the cloud collector)
+SESSION = requests.Session()  # re-uses the connection, faster than a new one each time
 
 
 def rpc(method, params):
     payload = {"jsonrpc": "2.0", "id": 1, "method": method, "params": params}
     for attempt in range(4):
         try:
-            response = requests.post(RPC_URL, json=payload, timeout=30)
+            response = SESSION.post(RPC_URL, json=payload, timeout=30)
             response.raise_for_status()
             data = response.json()
             if "error" in data:
@@ -76,7 +78,11 @@ def scan(db):
 
     print(f"Scanning blocks {start} to {end} ({end - start + 1} blocks). This can take a few minutes...")
     new_count = 0
+    last_done = start - 1
     for number in range(start, end + 1):
+        if DEADLINE and time.time() > DEADLINE:
+            print("Time budget used up - stopping here, the rest will be scanned next run.")
+            break
         block = rpc("eth_getBlockByNumber", [hex(number), True])
         ts = int(block["timestamp"], 16)
         for tx in block["transactions"]:
@@ -89,6 +95,7 @@ def scan(db):
                         (contract.lower(), tx["from"].lower(), number, ts, tx["hash"]),
                     )
                     new_count += cur.rowcount
+        last_done = number
         if (number - start) % 100 == 0:
             db.commit()
             set_last_block(db, number)
@@ -96,7 +103,8 @@ def scan(db):
         time.sleep(0.05)
 
     db.commit()
-    set_last_block(db, end)
+    if last_done >= start:
+        set_last_block(db, last_done)
     print(f"Finished. Saved {new_count} new contracts.\n")
 
 
