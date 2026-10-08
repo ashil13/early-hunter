@@ -19,6 +19,8 @@ jobs:
           python-version: "3.12"
       - run: pip install requests
       - run: python collect.py
+        env:
+          BLOCKSCOUT_API_KEY: ${{ secrets.BLOCKSCOUT_API_KEY }}
       - run: |
           git config user.name "collector"
           git config user.email "collector@users.noreply.github.com"
