@@ -10,6 +10,7 @@ Everything is saved in data/wallets.csv and data/funders.csv.
 
 import csv
 import os
+import re
 import time
 from datetime import datetime
 
@@ -39,6 +40,14 @@ class ApiError(Exception):
     pass
 
 
+def clean(text):
+    """Never let URLs or the API key leak into logs or the public website."""
+    text = re.sub(r"https?://\S+", "<url>", str(text))
+    if API_KEY:
+        text = text.replace(API_KEY, "***")
+    return re.sub(r"proapi_\w+", "***", text)
+
+
 # ------------------------------------------------------------------ csv helpers
 def read_rows(path):
     rows = {}
@@ -66,9 +75,10 @@ def get(path, params=None):
     for attempt in range(5):
         try:
             r = SESSION.get(BASE + path, params=params, timeout=30)
-            if r.status_code in (401, 403):
-                hint = "no BLOCKSCOUT_API_KEY set" if not API_KEY else "key rejected"
-                raise ApiError(f"{r.status_code} from Blockscout ({hint})")
+            if r.status_code in (401, 402, 403):
+                hint = "no BLOCKSCOUT_API_KEY set" if not API_KEY else "key sent"
+                body = clean(getattr(r, "text", "") or "")[:160]
+                raise ApiError(f"HTTP {r.status_code} from Blockscout ({hint}) {body}")
             if r.status_code == 429:
                 time.sleep(2 * (attempt + 1))
                 continue
@@ -81,7 +91,7 @@ def get(path, params=None):
             raise
         except requests.RequestException as error:
             if attempt == 4:
-                raise ApiError(str(error))
+                raise ApiError(clean(f"{type(error).__name__}: {error}"))
             time.sleep(2)
     raise ApiError("rate limited too many times")
 
@@ -201,7 +211,7 @@ def enrich_all(targets, wallets, funders, deadline, max_new=100):
                 funders[f] = lookup_funder(f)
         except Exception as error:
             stats["errors"] += 1
-            stats["error_message"] = str(error)[:200]
+            stats["error_message"] = clean(error)[:200]
             consecutive += 1
             wallets[address] = {"address": address, "status": "error", "tx_count": "",
                                 "first_tx": "", "wake_ts": "", "gap_days": "",
